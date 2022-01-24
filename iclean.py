@@ -6,117 +6,164 @@ import re
 import time
 import sys
 
-currentPath = ""
-path = ""
-bk_path = ""
 
+def delAll(path):
+    """delAll 删除备份文件夹
 
-def bye():
-    print("\n        Bye!")
-    time.sleep(2)
-    sys.exit(0)
-
-
-def delAll(m=0):
-    print("是否清空备份文件夹: {} ？(yes / no)".format(bk_path))
-    if os.name == 'nt' and m == 0:
-        os.system("explorer {}".format(bk_path))
+    Args:
+        path (str): 备份文件夹位置
+    """
+    print("备份文件夹：", path)
+    print("是否清空备份文件夹？(yes / no)")
     try:
         s = input("> ")
     except KeyboardInterrupt:
         print("Abort.")
-        exit()
-    if (s.lower() in ['yes', 'y']):
-        for fileList in os.walk(bk_path):
+        sys.exit(0)
+    if s.lower() in ["yes", "y"]:
+        for fileList in os.walk(path):
             for name in fileList[2]:
                 os.remove(os.path.join(fileList[0], name))
-            shutil.rmtree(bk_path)
-        if not (os.path.exists(bk_path)):
+            shutil.rmtree(path)
+        if not os.path.exists(path):
             print("删除成功！")
+            print("Abort.")
+            time.sleep(1)
+            sys.exit(0)
     else:
         print("Abort.")
-    bye()
+        time.sleep(1)
+        sys.exit(0)
 
 
-def clean(path, bk_path):
+def clean(path, backup_path):
+    """clean 清理
+
+    Args:
+        path (str): 清理目标目录
+        backup_path (str): 备份目录
+    """
     i = 0
+    # 正则表达式
+    pattern1 = r"^\._\S+"
+    pattern2 = r"^\.DS_Store$"
     print("Selected path: " + path)
+    # 递归查找目录下文件
     for dirpath, dirs, files in os.walk(path):
         for dir in dirs:
             if dir.lower() in ['.fseventsd', '.spotlight-v100', '.trashes']:
                 i += 1
                 filePath = os.path.join(dirpath, dir)
                 print("* {} Found... {}".format(i, filePath))
-                if (os.path.exists(bk_path + "\\" + dir)):
-                    os.rename(bk_path + "\\" + dir,
-                              bk_path + "\\" + dir + str(i))
-                    shutil.move(filePath, bk_path)
+                if (os.path.exists(backup_path + os.path.sep + dir)):
+                    try:
+                        os.rename(backup_path + os.path.sep + dir,
+                                  backup_path + os.path.sep + dir + str(i))
+                    except IOError as err:
+                        print("不能重命名" + backup_path + os.path.sep + dir, err)
+                    try:
+                        shutil.move(filePath, backup_path)
+                    except IOError as err:
+                        print("不能移动" + filePath, err)
                 else:
-                    shutil.move(filePath, bk_path)
-
+                    try:
+                        shutil.move(filePath, backup_path)
+                    except IOError as err:
+                        print("不能移动" + filePath, err)
         for file in files:
-            matchObj1 = re.match(r"^\._\S+", file, re.I)
-            matchObj2 = re.match(r"\.DS_Store$", file, re.I)
-
-            if matchObj1:
+            matchObj1 = re.match(pattern1, file, re.I)
+            matchObj2 = re.match(pattern2, file, re.I)
+            if matchObj1 or matchObj2:
                 i += 1
                 filePath = os.path.join(dirpath, file)
                 print("* {} Found... {}".format(i, filePath))
-                if (os.path.exists(bk_path + "\\" + file)):
-                    os.rename(bk_path + "\\" + file,
-                              bk_path + "\\" + file + str(i))
-                    shutil.move(filePath, bk_path)
+                if (os.path.exists(backup_path + os.path.sep + file)):
+                    try:
+                        os.rename(backup_path + os.path.sep + file,
+                                  backup_path + os.path.sep + file + str(i))
+                    except IOError as err:
+                        print("不能重命名" + backup_path + os.path.sep + file, err)
+                    try:
+                        shutil.move(filePath, backup_path)
+                    except IOError as err:
+                        print("不能移动" + filePath, err)
                 else:
-                    shutil.move(filePath, bk_path)
-            if matchObj2:
-                i += 1
-                filePath = os.path.join(dirpath, file)
-                print("* {} Found... {}".format(i, filePath))
-                if (os.path.exists(bk_path + "\\" + file)):
-                    os.rename(bk_path + "\\" + file,
-                              bk_path + "\\" + file + str(i))
-                    shutil.move(filePath, bk_path)
-                else:
-                    shutil.move(filePath, bk_path)
+                    try:
+                        shutil.move(filePath, backup_path)
+                    except IOError as err:
+                        print("不能移动" + filePath, err)
     if (i == 0):
-        print("\n* No trash file found!\n")
-        delAll(m=1)
+        print("\n*No trash file found!")
+        print("Abort.")
+        time.sleep(1)
+        shutil.rmtree(backup_path)
     else:
-        delAll()
+        if OS_NAME == 'nt':
+            os.system("explorer " + backup_path)
+        if OS_NAME == 'posix':
+            os.system("ls -a " + backup_path)
+        delAll(backup_path)
 
 
-def mkDir(bk_path):
-    if not (os.path.exists(bk_path + "\\MacOS-trash-file-backup")):
-        os.mkdir(bk_path + "\\MacOS-trash-file-backup")
-    time.sleep(0.5)
-    if (os.path.exists(bk_path + "\\MacOS-trash-file-backup")):
-        print("备份文件夹创建成功..." + bk_path + "\\MacOS-trash-file-backup")
-
-
-if __name__ == "__main__":
-    if os.name == 'nt':
-        os.system('cls')
-    elif os.name == 'posix':
-        os.system('clear')
-    currentPath = os.getcwd()
-    print("==============================")
-    print("请输入需要处理的目录，例如：C:\ ")
-    print("输入 `this` 处理当前目录: {}".format(currentPath))
+def selectPath() -> str:
+    print("====================", "OS:", OS_NAME)
+    print("请输入需要处理的目录")
+    print("输入 `this` 处理当前目录 ")
     try:
-        path = input("=> ")
+        src = input("=> ")
     except KeyboardInterrupt:
         print("Abort.")
-        exit()
+        sys.exit(0)
+    if src.lower() == "this" or os.path.exists(src):
+        return src
+    else:
+        raise FileNotFoundError(src)
+
+
+def mkDir(path):
+    """mkDir 创建备份文件夹
+
+    Args:
+        path (str): 文件夹路径
+
+    Raises:
+        FileNotFoundError: 无法创建文件夹
+    """
+    if not (os.path.exists(path + os.path.sep + "MAC-TMP-FILES")):
+        os.mkdir(path + os.path.sep + "MAC-TMP-FILES")
+    time.sleep(0.5)
+    if (os.path.exists(path + os.path.sep + "MAC-TMP-FILES")):
+        print("备份文件夹创建成功..." + path + os.path.sep + "MAC-TMP-FILES")
+    else:
+        raise FileNotFoundError(path + os.path.sep + "MAC-TMP-FILES")
+
+
+def main():
+    """main 主函数，方便外部调用
+    """
+    # 获取本文件所在目录
+    currentPath = os.getcwd() + os.path.sep
+    path = selectPath()
     print("备份文件夹目录：（不要在处理的目录下！）")
     try:
-        bk_path = input("=> ")
+        backup_path = input("=> ")
     except KeyboardInterrupt:
         print("Abort.")
-        exit()
-    mkDir(bk_path)
-    bk_path = bk_path + "\\MacOS-trash-file-backup"
+        sys.exit(0)
+    mkDir(backup_path)
+    backup_path = backup_path + os.path.sep + "MAC-TMP-FILES"
     if (path.lower() == "this"):
-        clean(currentPath, bk_path)
+        clean(currentPath, backup_path)
     else:
-        path = path + "\\"
-        clean(path, bk_path)
+        clean(path, backup_path)
+
+
+OS_NAME = ""
+
+if __name__ == "__main__":
+    OS_NAME = os.name
+    if OS_NAME == 'nt':
+        os.system('cls')
+    elif OS_NAME == 'posix':
+        os.system('clear')
+    main()
