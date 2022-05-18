@@ -104,3 +104,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 build/
+.DS_Store
